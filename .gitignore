@@ -1,0 +1,20 @@
+# Sensitive config (tokens, secrets)
+config.py
+
+# Database
+*.db
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE / editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+.DS_Store
