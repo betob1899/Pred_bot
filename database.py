@@ -1,11 +1,13 @@
 from sqlalchemy import create_engine, Column, Integer, String, Boolean
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
+
 class Base(DeclarativeBase):
     pass
 
+
 class Usuario(Base):
-    __tablename__ = "Participantes"  
+    __tablename__ = "Participantes"
 
     id = Column(Integer, primary_key=True)
 
@@ -14,6 +16,7 @@ class Usuario(Base):
     nombre = Column(String)
 
     bloqueado = Column(Boolean, default=False)
+
 
 class Registro(Base):
     __tablename__ = "registros"
@@ -30,6 +33,7 @@ class Registro(Base):
 
     rango_bloqueado = Column(String)
 
+
 class Configuracion(Base):
     __tablename__ = "configuracion"
 
@@ -39,11 +43,15 @@ class Configuracion(Base):
 
     numero_evento = Column(Integer, default=1)
 
+    hora_inicio = Column(String, nullable=True)
+
+
 engine = create_engine("sqlite:///bot_datos.db")
 
 Base.metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)
+
 
 def inicializar_configuracion():
     session = Session()
@@ -54,11 +62,13 @@ def inicializar_configuracion():
         session.commit()
     session.close()
 
+
 def obtener_configuracion():
     session = Session()
     config = session.query(Configuracion).first()
     session.close()
     return config
+
 
 def obtener_o_crear_usuario(telegram_id, nombre=None):
     session = Session()
@@ -72,6 +82,7 @@ def obtener_o_crear_usuario(telegram_id, nombre=None):
     session.close()
     return usuario
 
+
 def usuario_esta_bloqueado(telegram_id):
     session = Session()
     usuario = session.query(Usuario).filter_by(telegram_id=telegram_id).first()
@@ -80,13 +91,15 @@ def usuario_esta_bloqueado(telegram_id):
         return usuario.bloqueado
     return False
 
+
 def verificar_conflicto(minutos):
     from config import RANGO_MINUTOS
     session = Session()
     registros = session.query(Registro).all()
 
     # Generamos todos los minutos que ocuparía el nuevo registro
-    rango_nuevo = set(range(minutos - RANGO_MINUTOS, minutos + RANGO_MINUTOS + 1))
+    rango_nuevo = set(range(minutos - RANGO_MINUTOS,
+                      minutos + RANGO_MINUTOS + 1))
     # set() es un conjunto, útil para comparar grupos de valores rápidamente
     # range(83, 88) genera: 83, 84, 85, 86, 87
 
@@ -105,6 +118,7 @@ def verificar_conflicto(minutos):
     session.close()
     return False
 
+
 def guardar_registro(telegram_id, nombre, tiempo_original, minutos_totales, rango_bloqueado):
     session = Session()
 
@@ -113,7 +127,7 @@ def guardar_registro(telegram_id, nombre, tiempo_original, minutos_totales, rang
         nombre_usuario=nombre,
         tiempo_original=tiempo_original,
         minutos_totales=minutos_totales,
-        rango_bloqueado=rango_bloqueado  
+        rango_bloqueado=rango_bloqueado
     )
     session.add(nuevo_registro)
 
@@ -123,6 +137,7 @@ def guardar_registro(telegram_id, nombre, tiempo_original, minutos_totales, rang
 
     session.commit()
     session.close()
+
 
 def resetear_evento():
     session = Session()
@@ -134,7 +149,50 @@ def resetear_evento():
     config = session.query(Configuracion).first()
     if config:
         config.numero_evento += 1
+        config.sistema_abierto = True
 
     session.commit()
     session.close()
 
+
+def cerrar_evento():
+    session = Session()
+    config = session.query(Configuracion).first()
+    if config:
+        config.sistema_abierto = False
+    session.commit()
+    session.close()
+
+
+def obtener_registros():
+    """
+    Devuelve todos los registros del evento actual.
+    """
+    session = Session()
+    registros = session.query(Registro).all()
+    session.close()
+    return registros
+
+
+def guardar_hora_inicio(hora):
+    """
+    Guarda la hora de inicio ingresada por el administrador.
+    """
+    session = Session()
+    config = session.query(Configuracion).first()
+    if config:
+        config.hora_inicio = hora
+    session.commit()
+    session.close()
+
+
+def obtener_hora_inicio():
+    """
+    Devuelve la hora de inicio guardada o None si no existe.
+    """
+    session = Session()
+    config = session.query(Configuracion).first()
+    session.close()
+    if config:
+        return config.hora_inicio
+    return None
